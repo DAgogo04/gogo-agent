@@ -27,7 +27,7 @@ from gogo.loop.models import OpenAICompatClient
 from gogo.ops import observability as obs
 from gogo.tools.registry import Tool, ToolRegistry
 
-ASK = ("research the top 5 videos' comments of Robin's AI Stories YouTube Channel and give "
+ASK = ("research the top 5 videos' comments of a leading AI-news YouTube channel and give "
        "me a comprehensive analysis on what works well for my audience")
 
 

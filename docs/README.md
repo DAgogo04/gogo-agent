@@ -42,7 +42,7 @@ on [excalidraw.com](https://excalidraw.com), and remix it.
 
 | Chart | What it explains |
 |---|---|
-| [`gogo-architecture.excalidraw`](whiteboards/gogo-architecture.excalidraw) | Gogo itself — harness, loop, memory pillars, LLM Ops (editable rebuild of [the whiteboard](architecture-whiteboard.png)) |
+| [`gogo-architecture.excalidraw`](whiteboards/gogo-architecture.excalidraw) | Gogo itself — harness, loop, memory pillars, LLM Ops (editable architecture diagram) |
 | [`loop-vs-graph.excalidraw`](whiteboards/loop-vs-graph.excalidraw) | Loop vs graph engineering — the ladder, and two timelines from a measured run of `gogo brief` against `gogo gather` ([the write-up](loop-vs-graph.md)) |
 | [`memory-anatomy.excalidraw`](whiteboards/memory-anatomy.excalidraw) | the three memory kinds and where each lives |
 | [`memory-in-harness.excalidraw`](whiteboards/memory-in-harness.excalidraw) | memory inside the harness |

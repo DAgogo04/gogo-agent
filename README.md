@@ -26,9 +26,8 @@ the parts that matter — each one is plain Python you can read, change and keep
 - **Bring your own model.** Anthropic, OpenAI, Gemini, DeepSeek, OpenRouter and
   more — one dialect in the loop, a small adapter per provider.
 
-![gogo-agent architecture — the whiteboard](docs/architecture-whiteboard.png)
-
-> Every box on the whiteboard maps to a file — see [the architecture](docs/architecture.md).
+> Every piece maps to a file — see [the architecture](docs/architecture.md)
+> and the editable diagrams in [docs/whiteboards](docs/whiteboards/).
 
 ## Quickstart
 
