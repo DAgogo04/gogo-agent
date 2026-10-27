@@ -1,0 +1,179 @@
+[project]
+name = "gogo-agent"
+# Single source of truth is gogo/__init__.py.
+dynamic = ["version"]
+description = "A local-first AI agent harness you actually own: loop, memory and eval, running on your machine."
+readme = "README.md"
+# Code is MIT; the bundled fonts are SIL OFL 1.1.
+license = "MIT AND OFL-1.1"
+license-files = ["LICENSE", "gogo/ops/static/fonts/OFL-*.txt"]
+authors = [{ name = "DAgogo04" }]
+requires-python = ">=3.11"
+keywords = ["ai-agent", "llm", "agent-framework", "local-first", "llmops", "memory", "eval"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "anthropic>=0.40",   # anthropic wire format: Anthropic, Kimi, GLM, MiniMax
+    "openai>=1.50",      # openai wire format: OpenAI, Gemini, DeepSeek (and embeddings)
+    "python-dotenv>=1.0",
+    "rich>=13.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/DAgogo04/gogo-agent"
+Repository = "https://github.com/DAgogo04/gogo-agent"
+Issues = "https://github.com/DAgogo04/gogo-agent/issues"
+Changelog = "https://github.com/DAgogo04/gogo-agent/releases"
+
+[project.scripts]
+# Branded CLI: `gogo dashboard`, `gogo voice`, `gogo` to chat, etc.
+gogo = "gogo.__main__:main"
+
+[project.optional-dependencies]
+# Eval pillar: LLM-as-judge (deterministic evals need only pytest)
+eval = [
+    "pytest>=8.0",
+    "deepeval>=2.0",
+]
+# LLM-Ops pillar: local trace dashboard (traces also always land in traces/*.jsonl)
+tracing = [
+    "arize-phoenix>=7.0",
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-exporter-otlp>=1.27",
+]
+# Optional gateway: message your laptop from your phone
+telegram = [
+    "python-telegram-bot>=21.0",
+]
+# Optional write-through target for create_event; the local SQLite/ICS mock
+# remains the default and source of truth.
+gcal = [
+    "google-api-python-client>=2.0",
+    "google-auth>=2.0",
+    "google-auth-httplib2>=0.2",
+    "httplib2>=0.22",
+    # The browser consent flow. Without it the only way in is `gcloud auth
+    # application-default login`, which is a developer ritual, not a sign-in.
+    "google-auth-oauthlib>=1.0",
+]
+# Optional gateway: message Gogo from Discord
+discord = [
+    "discord.py>=2.4",
+]
+# Optional gateway: WhatsApp via Meta Cloud API (needs a public URL — see docstring)
+whatsapp = [
+    "httpx>=0.25",
+]
+# Optional gateway: talk to your laptop. TTS uses macOS `say` by default;
+# for the neural British voice: pip install kokoro soundfile (pulls torch).
+voice = [
+    "faster-whisper>=1.0",
+    "sounddevice>=0.4",
+    # gateway/voice.py imports numpy directly (audio buffers). It happens to
+    # arrive with faster-whisper today, but depending on a transitive dep is a
+    # bug waiting for an upstream release — declare what we actually import.
+    "numpy>=1.24",
+]
+# The beautiful neural voice (Kokoro-82M, Apache-2.0): British butler, fully
+# local/offline. Heavier — pulls torch (~2GB). `uv pip install '.[voice-neural]'`
+# and Gogo auto-detects it; no env var needed.
+voice-neural = [
+    "kokoro>=0.9",
+    "soundfile>=0.12",
+]
+# Optional semantic-memory upgrade path: Supabase pgvector
+supabase = [
+    "supabase>=2.0",
+]
+# The Memory arena: external memory backends raced against gogo's own FTS5 store.
+# Never installed by default — the core is stdlib + anthropic/openai, and these
+# only exist so `make arena` can benchmark them.
+arena = [
+    "mem0ai>=2.0",
+    "zep-cloud>=2.0",
+    "langmem>=0.0.30",
+    "langgraph>=0.3",
+]
+# Optional episodic-memory backend: Notion database
+# Requires >=2.5: the adapter uses the data_sources API (Notion API 2025-09-03).
+notion = [
+    "notion-client>=2.5",
+]
+# Optional: connect MCP servers (.gogo/mcp.json)
+# >=2.1: the Streamable HTTP transport is `streamable_http_client` and takes a
+# pre-built httpx client. 1.x spelled it `streamablehttp_client`, took headers
+# directly, and yielded a third element — so mcp_client.py's remote branch does
+# not work on 1.x at all, and an unpinned floor would fail at import time.
+mcp = [
+    "mcp>=2.1",
+]
+dev = [
+    "pytest>=8.0",
+    # Pinned EXACTLY: an unpinned linter means every ruff release can turn CI
+    # red with zero code changes (happened 2026-07-24 — 0.16.0 shipped new
+    # rules and 106 violations appeared overnight). Bump deliberately.
+    "ruff==0.16.0",
+    # Already the [build-system] backend below, fetched into an isolated
+    # build env on every `pip install` regardless. Declaring it here too
+    # makes it importable in THIS venv, so the packaging test can ask
+    # hatchling which files a build would include without running one
+    # (offline, no `uv` needed). Pinned EXACTLY: it calls
+    # recurse_included_files, an internal, undocumented API, so an unpinned
+    # floor lets a routine hatchling release turn CI red with zero code
+    # change here. Re-verify the enumeration still matches a real build.
+    "hatchling==1.32.4",
+]
+
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+# An sdist should be what you need to BUILD and TEST gogo — source, bundled
+# skills, schema, evals. The docs and whiteboards stay on GitHub, where
+# people actually read them; none of it belongs in a package download.
+[tool.hatch.version]
+path = "gogo/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "docs", "examples", "scripts/whiteboard",
+    ".claude", ".deepeval", ".github",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["gogo"]
+
+# The bundled skills live at the repo root. But `packages = ["gogo"]` ships
+# only the package, so copying them in at build time keeps the skills
+# alongside the package; gogo.memory.bundled_skill_dirs() looks in both
+# places and explains why.
+[tool.hatch.build.targets.wheel.force-include]
+"skills" = "gogo/skills"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# Rules gogo IGNORES on purpose — each is a deliberate style choice, not an
+# oversight. If you're tempted to remove one, read the reason first:
+ignore = [
+    "BLE001",  # blind `except Exception` is the documented pattern: tools and
+               # observers surface errors as text instead of crashing the loop
+    "DTZ001", "DTZ005", "DTZ011",  # naive local datetimes are intentional —
+               # daily trace files and workspace folders are named in the
+               # user's local day, not UTC
+    "S110",    # try/except/pass around optional integrations (OTel, extras)
+    # RUF100 flags a `# noqa` for a rule that is no longer enabled. Because the
+    # rules above are globally ignored, ANY `# noqa: BLE001` a contributor
+    # writes — the natural, correct-looking thing to write next to a broad
+    # `except Exception` — becomes a CI failure in a file they never touched.
+    # That footgun blocked two contributed-skill PRs (#14, #26) on 2026-07-26. Turning
+    # RUF100 off costs us the ability to spot genuinely stale noqas; leaving it
+    # on costs contributors a red CI they can't explain. Contributors win.
+    "RUF100",
+]

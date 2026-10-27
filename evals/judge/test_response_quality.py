@@ -1,0 +1,88 @@
+"""LLM-AS-JUDGE EVAL — "was the response good?" This is NOT a unit test.
+
+A judge model scores qualities no assertion can check: helpfulness, whether
+Gogo actually used what it remembered, tone. Scores are 0–1 percentages
+with a threshold, not 0/1 truths — never confuse the two (that confusion is
+exactly what the deterministic suite next door exists to prevent).
+
+Requires the active provider's API key: the judge is a real model call.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from evals.helpers import HAS_KEY, make_gogo
+
+pytestmark = pytest.mark.skipif(not HAS_KEY, reason="LLM-as-judge needs the active provider's API key")
+
+
+@pytest.fixture(scope="module")
+def geval_metrics():
+    from deepeval.metrics import GEval
+    from deepeval.test_case import LLMTestCaseParams
+
+    from evals.judge.anthropic_judge import AnthropicJudge
+
+    judge = AnthropicJudge()
+    helpful = GEval(
+        name="Helpfulness",
+        evaluation_steps=[
+            "Check whether the assistant reply directly addresses the user's request.",
+            ("Check whether the reply confirms any action taken, including what was "
+             "done, when, and who was involved."),
+            "Check whether the reply is concise and warm.",
+        ],
+        evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+        model=judge,
+        threshold=0.6,
+    )
+    uses_memory = GEval(
+        name="MemoryUse",
+        evaluation_steps=[
+            ("Identify the remembered facts in the Retrieval Context that are relevant "
+             "to the user's Input."),
+            ("Check whether the assistant reply correctly incorporates those relevant "
+             "remembered facts instead of ignoring them."),
+        ],
+        evaluation_params=[
+            LLMTestCaseParams.INPUT,
+            LLMTestCaseParams.ACTUAL_OUTPUT,
+            LLMTestCaseParams.RETRIEVAL_CONTEXT,
+        ],
+        model=judge,
+        threshold=0.6,
+    )
+    return helpful, uses_memory
+
+
+def test_scheduling_reply_is_helpful(tmp_path, geval_metrics):
+    from deepeval import assert_test
+    from deepeval.test_case import LLMTestCase
+
+    helpful, _ = geval_metrics
+    app = make_gogo(tmp_path / "home")
+    user_message = "Schedule a coffee with Sam next Tuesday at 9am"
+    result = app.respond(user_message)
+
+    assert_test(LLMTestCase(input=user_message, actual_output=result.reply), [helpful])
+
+
+def test_reply_uses_remembered_preference(tmp_path, geval_metrics):
+    from deepeval import assert_test
+    from deepeval.test_case import LLMTestCase
+
+    _, uses_memory = geval_metrics
+    app = make_gogo(tmp_path / "home")
+    app.memory.facts.add("sam", "Sam prefers morning meetings")
+    user_message = "Book a meeting with Sam next week"
+    result = app.respond(user_message)
+
+    assert_test(
+        LLMTestCase(
+            input=user_message,
+            actual_output=result.reply,
+            retrieval_context=["Sam prefers morning meetings"],
+        ),
+        [uses_memory],
+    )
